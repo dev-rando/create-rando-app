@@ -1,0 +1,31 @@
+{
+    "name": "create-rando-app",
+    "version": "1.0.3",
+    "description": "Create a new Dev Rando challenge app",
+    "main": "index.js",
+    "bin": {
+        "create-rando-app": "bin/create-rando-app.js"
+    },
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "keywords": [
+        "dev-rando",
+        "challenge",
+        "create-app",
+        "cli",
+        "rando",
+        "dev",
+        "zfg",
+        "oot",
+        "lofi"
+    ],
+    "author": "@lofimichael, Michael Kirsanov",
+    "dependencies": {
+        "axios": "^0.21.1",
+        "chalk": "^4.1.2",
+        "inquirer": "^8.1.2",
+        "ora": "^5.4.1",
+        "cli-progress": "^3.12.0"
+    }
+}
