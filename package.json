@@ -1,6 +1,6 @@
 {
     "name": "create-rando-app",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "description": "Create a new Dev Rando challenge app",
     "main": "index.js",
     "bin": {
