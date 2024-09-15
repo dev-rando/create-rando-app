@@ -17,12 +17,16 @@ async function fetchCurrentChallenge() {
     spinner: 'dots'
   }).start();
   try {
-    const response = await axios.get(API_URL);
+    const input = { packageManager: "npm" };
+    const response = await axios.get(`${API_URL}?batch=1&input=${encodeURIComponent(JSON.stringify({ "0": { json: input } }))}`);
     spinner.succeed(chalk.greenBright.bold('Challenge fetched successfully'));
-    return response.data.result.data.json;
+    return response.data[0].result.data;
   } catch (error) {
     spinner.fail(chalk.redBright.bold('Failed to fetch challenge'));
     console.error(chalk.red('Error:', error.message));
+    if (error.response) {
+      console.error(chalk.red('Response data:', JSON.stringify(error.response.data, null, 2)));
+    }
     process.exit(1);
   }
 }
@@ -51,14 +55,14 @@ async function createProject(projectName, challenge) {
   spinner.succeed(chalk.greenBright.bold(`Project directory '${projectName}' created`));
 
   spinner.start('Creating package.json');
-  await fs.promises.writeFile('package.json', JSON.stringify(challenge, null, 2));
+  await fs.promises.writeFile('package.json', JSON.stringify(challenge.json, null, 2));
   spinner.succeed(chalk.greenBright.bold('package.json created'));
 
   spinner.start('Creating devrando.config.json');
   const devrandoConfig = {
-    challengeHash: challenge.devrandoMetadata.challengeHash,
-    generatedAt: challenge.devrandoMetadata.generatedAt,
-    totalDependencies: challenge.devrandoMetadata.totalDependencies
+    challengeHash: challenge.json.devrandoMetadata.challengeHash,
+    generatedAt: challenge.json.devrandoMetadata.generatedAt,
+    totalDependencies: challenge.json.devrandoMetadata.totalDependencies
   };
   await fs.promises.writeFile('devrando.config.json', JSON.stringify(devrandoConfig, null, 2));
   spinner.succeed(chalk.greenBright.bold('devrando.config.json created'));
@@ -83,7 +87,13 @@ async function initGitRepo() {
 }
 
 async function installDependencies(challenge) {
-  const numDependencies = Object.keys(challenge.devDependencies).length + Object.keys(challenge.dependencies).length;
+  if (!challenge || !challenge.json || !challenge.json.dependencies || !challenge.json.devDependencies) {
+    console.error(chalk.red.bold('Invalid challenge data. Unable to install dependencies.'));
+    console.log('Challenge data:', JSON.stringify(challenge, null, 2));
+    throw new Error('Invalid challenge data');
+  }
+
+  const numDependencies = Object.keys(challenge.json.dependencies).length + Object.keys(challenge.json.devDependencies).length;
   const spinner = ora({
     text: chalk.greenBright.bold(`Installing ${numDependencies} dependencies, this will take a moment...`),
     color: 'green',
@@ -92,7 +102,14 @@ async function installDependencies(challenge) {
 
   return new Promise((resolve, reject) => {
     const npmInstall = spawn('npm', ['install', '--force'], {
-      stdio: ['ignore', 'ignore', 'pipe'] // Ignore stdout, pipe only stderr
+      stdio: ['ignore', 'ignore', 'pipe'] // Changed to ignore stdout and pipe only stderr
+    });
+
+    npmInstall.stderr.on('data', (data) => {
+      // Only log critical errors, not all npm output
+      if (data.toString().toLowerCase().includes('error')) {
+        console.error(chalk.red(data.toString()));
+      }
     });
 
     npmInstall.on('close', (code) => {
